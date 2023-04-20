@@ -1,12 +1,27 @@
 mod ray;
 
-use std::io::Cursor;
-
-use image::{io::Reader, ImageBuffer, Rgb};
+use image::{ImageBuffer, Rgb};
 use nalgebra::Vector3;
 use ray::Ray;
 
+fn hit_sphere(r: &Ray) -> bool {
+    
+    let (center, radius) = (Vector3::new(0.0,0.0,-1.0), 0.5);
+
+    let oc = center - r.origin;
+    let a = r.direction.norm_squared();
+    let b = 2.0 * oc.dot(&r.direction);
+    let c = oc.norm_squared() - radius * radius;
+
+    let discriminant = b * b - 4.0 * a * c;
+    discriminant > 0.0
+}
+
 fn ray_color(r: &Ray) -> Vector3<f64> {
+
+    if hit_sphere(r) {
+        return Vector3::new(0.9,0.5,0.8);
+    }
 
     let unit_direction = r.direction.normalize();
     let t = 0.5 * (unit_direction.y + 1.0);
