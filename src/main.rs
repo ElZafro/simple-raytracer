@@ -10,13 +10,13 @@ fn hit_sphere(r: &Ray) -> Option<f64> {
 
     let oc = r.origin - center;
     let a = r.direction.norm_squared();
-    let b = 2.0 * oc.dot(&r.direction);
+    let half_b = oc.dot(&r.direction);
     let c = oc.norm_squared() - radius * radius;
 
-    let discriminant = b * b - 4.0 * a * c;
+    let discriminant = half_b * half_b - a * c;
     
     if discriminant <= 0.0  { return None; }
-    Some((- b - discriminant.sqrt()) / (2.0 * a))
+    Some((- half_b - discriminant.sqrt()) / a)
 }
 
 fn ray_color(r: &Ray) -> Vector3<f64> {
