@@ -1,15 +1,18 @@
+use std::rc::Rc;
+
 use nalgebra::Vector3;
 
-use crate::{hit::{Hit, HitRecord}, ray::Ray};
+use crate::{hit::{Hit, HitRecord}, ray::Ray, material::Scatter};
 
 pub struct Sphere {
     center: Vector3<f64>,
-    radius: f64
+    radius: f64,
+    material: Rc<dyn Scatter>
 }
 
 impl Sphere{
-    pub fn new(center: Vector3<f64>, radius: f64) -> Self {
-        Self { center, radius }
+    pub fn new(center: Vector3<f64>, radius: f64, material: Rc<dyn Scatter>) -> Self {
+        Self { center, radius, material }
     }
 }
 
@@ -35,11 +38,13 @@ impl Hit for Sphere {
         }
 
         let p = r.at(root);
+        let n = (p - self.center) / self.radius;
         Some( 
             HitRecord {
                 point: p,
-                normal: (p - self.center) / self.radius,
+                normal: n,
                 t: root,
+                material: self.material.clone(),
             }
         )
     }

@@ -1,23 +1,26 @@
 mod ray;
 mod hit;
 mod sphere;
+mod material;
+
+use std::rc::Rc;
 
 use hit::{Hit, World};
 use image::{ImageBuffer, Rgb};
 use nalgebra::Vector3;
-use rand::random;
 use ray::Ray;
 use sphere::Sphere;
+
+use crate::material::{Lambertian, Metal};
 
 fn ray_color(r: &Ray, world: &World, depth: u64) -> Vector3<f64> {
 
     if depth == 0 { return Vector3::new(0.0, 0.0, 0.0); }
 
-    if let Some(hit_record) = world.hit(r, 0.001, f64::MAX) {
-        let random_normalized_vector = Vector3::new(random::<f64>() * 2.0 - 1.0 , random::<f64>() * 2.0 - 1.0, random::<f64>() * 2.0 - 1.0).normalize();
-        let target = hit_record.point + hit_record.normal + random_normalized_vector;
-        let ray = Ray::new(hit_record.point, target);
-        return 0.5 * ray_color(&ray, world, depth - 1);
+    if let Some(hit_record) = world.hit(r, 0.001, f64::INFINITY) {
+        if let Some((scattered_ray, attenuation)) = hit_record.material.scatter(r, &hit_record) {
+            return attenuation.component_mul(&ray_color(&scattered_ray, world, depth - 1));
+        }
     }
 
     let unit_direction = r.direction.normalize();
@@ -38,14 +41,26 @@ fn main() {
     //Image
     const ASPECT_RATIO: f64 = 16.0 / 9.0;
     const WIDTH: usize = 256;
-    const HEIGHT: usize = ((256_f64) / ASPECT_RATIO) as usize;
-    const SAMPLES_PER_PIXEL: usize = 100;
+    const HEIGHT: usize = ((WIDTH as f64) / ASPECT_RATIO) as usize;
+    const SAMPLES_PER_PIXEL: usize = 300;
     const MAX_DEPTH: u64 = 5;
 
     //World
     let mut world = World::new();
-    world.push(Box::new(Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5)));
-    world.push(Box::new(Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0)));
+    let material_ground = Rc::new(Lambertian::new(Vector3::new(0.8, 0.8, 0.0)));
+    let material_center = Rc::new(Lambertian::new(Vector3::new(0.7, 0.3, 0.3)));
+    let material_left = Rc::new(Metal::new(Vector3::new(0.8, 0.8, 0.8), 0.0));
+    let material_right = Rc::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 1.0));
+
+    let sphere_ground = Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0, material_ground);
+    let sphere_center = Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5, material_center);
+    let sphere_left = Sphere::new(Vector3::new(-1.0, 0.0, -1.0), 0.5, material_left);
+    let sphere_right = Sphere::new(Vector3::new(1.0, 0.0, -1.0), 0.5, material_right);
+
+    world.push(Box::new(sphere_ground));
+    world.push(Box::new(sphere_center));
+    world.push(Box::new(sphere_left));
+    world.push(Box::new(sphere_right));
 
     //Camera
     let viewport_height = 2.0;
