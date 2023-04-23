@@ -42,6 +42,7 @@ fn main() {
     let viewport_height = 2.0;
     let viewport_width = viewport_height * ASPECT_RATIO;
     let focal_length = 1.0;
+    const SAMPLES_PER_PIXEL: usize = 128;
 
     let origin = Vector3::new(0.0, 0.0, 0.0);
     let horizontal = Vector3::new(viewport_width, 0.0, 0.0);
@@ -54,16 +55,18 @@ fn main() {
 
     let mut imgbuf = ImageBuffer::new(WIDTH as u32, HEIGHT as u32);
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
+        let mut pixel_color = Vector3::<f64>::new(0.0, 0.0, 0.0);
+        for _ in 0..SAMPLES_PER_PIXEL {
+            let y = HEIGHT as u32 - y;
 
-        let y = HEIGHT as u32 - y;
+            let u = (x as f64 + rand::random::<f64>() - 0.5) / ((WIDTH - 1) as f64);
+            let v = (y as f64 + rand::random::<f64>() - 0.5) / ((HEIGHT - 1) as f64);
 
-        let u = (x as f64) / ((WIDTH - 1) as f64);
-        let v = (y as f64) / ((HEIGHT - 1) as f64);
-
-        let direction = lower_left_corner + u * horizontal + v * vertical - origin;
-        let ray = Ray::new(origin, direction);
-        let pixel_color = ray_color(&ray);
-        
+            let direction = lower_left_corner + u * horizontal + v * vertical - origin;
+            let ray = Ray::new(origin, direction);
+            pixel_color += ray_color(&ray);
+        }
+        pixel_color /= SAMPLES_PER_PIXEL as f64;
         *pixel = Rgb([(pixel_color.x * 255.999) as u8, (pixel_color.y * 255.999) as u8, (pixel_color.z * 255.999) as u8]);
     }
 
