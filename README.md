@@ -1,5 +1,7 @@
 # Ray Tracing in One Weekend
 
+![Preview](image.png)
+
 This Rust project is based on the book [Ray Tracing in One Weekend](https://misterdanb.github.io/raytracinginrust/). It implements a simple ray tracer that generates an image using ray casting techniques.
 
 ## Requirements
