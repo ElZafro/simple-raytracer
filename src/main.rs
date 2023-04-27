@@ -2,6 +2,7 @@ mod ray;
 mod hit;
 mod sphere;
 mod material;
+mod camera;
 
 use std::rc::Rc;
 
@@ -11,7 +12,7 @@ use nalgebra::Vector3;
 use ray::Ray;
 use sphere::Sphere;
 
-use crate::material::{Lambertian, Metal};
+use crate::{material::{Lambertian, Metal}, camera::Camera};
 
 fn ray_color(r: &Ray, world: &World, depth: u64) -> Vector3<f64> {
 
@@ -49,7 +50,7 @@ fn main() {
     let mut world = World::new();
     let material_ground = Rc::new(Lambertian::new(Vector3::new(0.8, 0.8, 0.0)));
     let material_center = Rc::new(Lambertian::new(Vector3::new(0.7, 0.3, 0.3)));
-    let material_left = Rc::new(Metal::new(Vector3::new(0.8, 0.8, 0.8), 0.0));
+    let material_left = Rc::new(Metal::new(Vector3::new(0.8, 0.8, 0.8), 0.3));
     let material_right = Rc::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 1.0));
 
     let sphere_ground = Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0, material_ground);
@@ -62,18 +63,13 @@ fn main() {
     world.push(Box::new(sphere_left));
     world.push(Box::new(sphere_right));
 
-    //Camera
-    let viewport_height = 2.0;
-    let viewport_width = viewport_height * ASPECT_RATIO;
-    let focal_length = 1.0;
-
-    let origin = Vector3::new(0.0, 0.0, 0.0);
-    let horizontal = Vector3::new(viewport_width, 0.0, 0.0);
-    let vertical = Vector3::new(0.0, viewport_height, 0.0);
-    let lower_left_corner = origin 
-        - horizontal / 2.0 
-        - vertical / 2.0 
-        - Vector3::new(0.0, 0.0, focal_length);
+    let camera = Camera::new(
+        Vector3::new(0.0, 0.0, 0.0), 
+        Vector3::new(0.0, 0.0, -1.0), 
+        Vector3::new(0.0, 1.0, 0.0),
+        90.0,
+        16.0 / 9.0
+    );
 
 
     let mut imgbuf = ImageBuffer::new(WIDTH as u32, HEIGHT as u32);
@@ -85,8 +81,7 @@ fn main() {
             let u = (x as f64 + rand::random::<f64>() - 0.5) / ((WIDTH - 1) as f64);
             let v = (y as f64 + rand::random::<f64>() - 0.5) / ((HEIGHT - 1) as f64);
 
-            let direction = lower_left_corner + u * horizontal + v * vertical - origin;
-            let ray = Ray::new(origin, direction);
+            let ray = camera.get_ray(u, v);
             pixel_color += ray_color(&ray, &world, MAX_DEPTH);
         }
         pixel_color /= SAMPLES_PER_PIXEL as f64;
