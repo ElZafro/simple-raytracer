@@ -5,10 +5,11 @@ use nalgebra::Vector3;
 use crate::{ray::Ray, material::Scatter};
 
 pub struct HitRecord {
-  pub point: Vector3<f64>,
-  pub normal: Vector3<f64>,
-  pub t: f64,
-  pub material: Rc<dyn Scatter>,
+    pub point: Vector3<f64>,
+    pub normal: Vector3<f64>,
+    pub t: f64,
+    pub material: Rc<dyn Scatter>,
+    pub front_face: bool
 }
 
 pub type World = Vec<Box<dyn Hit>>;

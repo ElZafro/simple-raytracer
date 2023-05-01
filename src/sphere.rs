@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, f64::EPSILON};
 
 use nalgebra::Vector3;
 
@@ -45,6 +45,7 @@ impl Hit for Sphere {
                 normal: n,
                 t: root,
                 material: self.material.clone(),
+                front_face: r.direction.dot(&n) <= EPSILON
             }
         )
     }
