@@ -12,13 +12,12 @@ use nalgebra::Vector3;
 use ray::Ray;
 use sphere::Sphere;
 
-use crate::{material::{Lambertian, Metal}, camera::Camera};
+use crate::{material::{Lambertian, Metal, Dielectric}, camera::Camera};
 
 fn ray_color(r: &Ray, world: &World, depth: u64) -> Vector3<f64> {
 
-    if depth == 0 { return Vector3::new(0.0, 0.0, 0.0); }
-
-    if let Some(hit_record) = world.hit(r, 0.001, f64::INFINITY) {
+    if let Some(hit_record) = world.hit(r, 0.001, f64::MAX) {
+        if depth == 0 { return Vector3::new(0.0, 0.0, 0.0); }
         if let Some((scattered_ray, attenuation)) = hit_record.material.scatter(r, &hit_record) {
             return attenuation.component_mul(&ray_color(&scattered_ray, world, depth - 1));
         }
@@ -49,22 +48,24 @@ fn main() {
     //World
     let mut world = World::new();
     let material_ground = Rc::new(Lambertian::new(Vector3::new(0.8, 0.8, 0.0)));
-    let material_center = Rc::new(Lambertian::new(Vector3::new(0.7, 0.3, 0.3)));
-    let material_left = Rc::new(Metal::new(Vector3::new(0.8, 0.8, 0.8), 0.0));
-    let material_right = Rc::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 1.0));
+    let material_center = Rc::new(Lambertian::new(Vector3::new(0.1, 0.2, 0.5)));
+    let material_left = Rc::new(Dielectric::new(1.5));
+    let material_right = Rc::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 0.0));
 
     let sphere_ground = Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0, material_ground);
     let sphere_center = Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5, material_center);
-    let sphere_left = Sphere::new(Vector3::new(-1.0, 0.0, -1.0), 0.5, material_left);
+    let sphere_left = Sphere::new(Vector3::new(-1.0, 0.0, -1.0), 0.5, material_left.clone());
+    let sphere_left_inner = Sphere::new(Vector3::new(-1.0, 0.0, -1.0), -0.4, material_left);
     let sphere_right = Sphere::new(Vector3::new(1.0, 0.0, -1.0), 0.5, material_right);
 
     world.push(Box::new(sphere_ground));
     world.push(Box::new(sphere_center));
     world.push(Box::new(sphere_left));
+    world.push(Box::new(sphere_left_inner));
     world.push(Box::new(sphere_right));
 
     let camera = Camera::new(
-        Vector3::new(0.5, 0.8, 1.0), 
+        Vector3::new(0.3, 0.84, 1.0), 
         Vector3::new(0.0, 0.0, -1.0), 
         Vector3::new(0.0, 1.0, 0.0),
         55.0,
