@@ -1,8 +1,8 @@
-mod ray;
-mod hit;
-mod sphere;
-mod material;
 mod camera;
+mod hit;
+mod material;
+mod ray;
+mod sphere;
 
 use std::rc::Rc;
 
@@ -12,12 +12,16 @@ use nalgebra::Vector3;
 use ray::Ray;
 use sphere::Sphere;
 
-use crate::{material::{Lambertian, Metal, Dielectric}, camera::Camera};
+use crate::{
+    camera::Camera,
+    material::{Dielectric, Lambertian, Metal},
+};
 
 fn ray_color(r: &Ray, world: &World, depth: u64) -> Vector3<f64> {
-
     if let Some(hit_record) = world.hit(r, 0.001, f64::MAX) {
-        if depth == 0 { return Vector3::new(0.0, 0.0, 0.0); }
+        if depth == 0 {
+            return Vector3::new(0.0, 0.0, 0.0);
+        }
         if let Some((scattered_ray, attenuation)) = hit_record.material.scatter(r, &hit_record) {
             return attenuation.component_mul(&ray_color(&scattered_ray, world, depth - 1));
         }
@@ -37,17 +41,16 @@ fn get_color(pixel_color: Vector3<f64>) -> Rgb<u8> {
 }
 
 fn main() {
-
     //Image
     const ASPECT_RATIO: f64 = 16.0 / 9.0;
-    const WIDTH: usize = 512;
+    const WIDTH: usize = 256;
     const HEIGHT: usize = ((WIDTH as f64) / ASPECT_RATIO) as usize;
     const SAMPLES_PER_PIXEL: usize = 300;
     const MAX_DEPTH: u64 = 5;
 
     //World
     let mut world = World::new();
-    let material_ground = Rc::new(Lambertian::new(Vector3::new(0.8, 0.8, 0.0)));
+    let material_ground = Rc::new(Lambertian::new(Vector3::new(0.5, 0.5, 0.0)));
     let material_center = Rc::new(Lambertian::new(Vector3::new(0.1, 0.2, 0.5)));
     let material_left = Rc::new(Dielectric::new(1.5));
     let material_right = Rc::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 0.0));
@@ -65,13 +68,12 @@ fn main() {
     world.push(Box::new(sphere_right));
 
     let camera = Camera::new(
-        Vector3::new(0.3, 0.84, 1.0), 
-        Vector3::new(0.0, 0.0, -1.0), 
+        Vector3::new(0.3, 0.84, 1.0),
+        Vector3::new(0.0, 0.0, -1.0),
         Vector3::new(0.0, 1.0, 0.0),
         55.0,
-        16.0 / 9.0
+        16.0 / 9.0,
     );
-
 
     let mut imgbuf = ImageBuffer::new(WIDTH as u32, HEIGHT as u32);
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
@@ -90,5 +92,4 @@ fn main() {
     }
 
     imgbuf.save("image.png").unwrap();
-    
 }

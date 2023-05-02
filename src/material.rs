@@ -1,14 +1,17 @@
 use nalgebra::Vector3;
 use rand::random;
 
-use crate::{ray::{Ray, reflect, refract}, hit::HitRecord};
+use crate::{
+    hit::HitRecord,
+    ray::{reflect, refract, Ray},
+};
 
 pub trait Scatter {
     fn scatter(&self, r_in: &Ray, record: &HitRecord) -> Option<(Ray, Vector3<f64>)>;
 }
 
 pub struct Lambertian {
-    albedo: Vector3<f64>
+    albedo: Vector3<f64>,
 }
 
 impl Lambertian {
@@ -19,11 +22,18 @@ impl Lambertian {
 
 impl Scatter for Lambertian {
     fn scatter(&self, r_in: &Ray, hit_record: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
-        let random_unit_vector = Vector3::new(random::<f64>() * 2.0 - 1.0 , random::<f64>() * 2.0 - 1.0, random::<f64>() * 2.0 - 1.0).normalize();
+        let random_unit_vector = Vector3::new(
+            random::<f64>() * 2.0 - 1.0,
+            random::<f64>() * 2.0 - 1.0,
+            random::<f64>() * 2.0 - 1.0,
+        )
+        .normalize();
         let mut scatter_direction = hit_record.normal + random_unit_vector;
-        
-        if scatter_direction.norm_squared() <= f64::EPSILON { scatter_direction = hit_record.normal; }
-        
+
+        if scatter_direction.norm_squared() <= f64::EPSILON {
+            scatter_direction = hit_record.normal;
+        }
+
         let scattered_ray = Ray::new(hit_record.point, scatter_direction);
         Some((scattered_ray, self.albedo))
     }
@@ -31,36 +41,45 @@ impl Scatter for Lambertian {
 
 pub struct Metal {
     albedo: Vector3<f64>,
-    fuzz: f64
+    fuzz: f64,
 }
 
 impl Metal {
     pub fn new(color: Vector3<f64>, fuzz: f64) -> Self {
-        Self { albedo: color, fuzz }
+        Self {
+            albedo: color,
+            fuzz,
+        }
     }
 }
 
 impl Scatter for Metal {
     fn scatter(&self, r_in: &Ray, hit_record: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
-        
         let reflected = reflect(&r_in.direction, &hit_record.normal).normalize();
-        let random_unit_vector = Vector3::new(random::<f64>() * 2.0 - 1.0 , random::<f64>() * 2.0 - 1.0, random::<f64>() * 2.0 - 1.0).normalize();
+        let random_unit_vector = Vector3::new(
+            random::<f64>() * 2.0 - 1.0,
+            random::<f64>() * 2.0 - 1.0,
+            random::<f64>() * 2.0 - 1.0,
+        )
+        .normalize();
         let scattered_ray = Ray::new(hit_record.point, reflected + self.fuzz * random_unit_vector);
 
-        if reflected.dot(&hit_record.normal) <= f64::EPSILON { return None; }
+        if reflected.dot(&hit_record.normal) <= f64::EPSILON {
+            return None;
+        }
 
         Some((scattered_ray, self.albedo))
     }
 }
 
 pub struct Dielectric {
-    ir: f64
+    ir: f64,
 }
 
 impl Dielectric {
     pub fn new(index_of_refraction: f64) -> Dielectric {
         Dielectric {
-            ir: index_of_refraction
+            ir: index_of_refraction,
         }
     }
 
@@ -80,7 +99,11 @@ impl Scatter for Dielectric {
         };
 
         let unit_direction = r_in.direction.normalize();
-        let n = if rec.front_face { rec.normal } else { rec.normal * -1.0 };
+        let n = if rec.front_face {
+            rec.normal
+        } else {
+            rec.normal * -1.0
+        };
 
         let cos_theta = (-1.0 * unit_direction).dot(&n).min(1.0);
         let sin_theta = (1.0 - cos_theta.powi(2)).sqrt();

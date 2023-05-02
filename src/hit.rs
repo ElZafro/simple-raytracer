@@ -2,14 +2,14 @@ use std::rc::Rc;
 
 use nalgebra::Vector3;
 
-use crate::{ray::Ray, material::Scatter};
+use crate::{material::Scatter, ray::Ray};
 
 pub struct HitRecord {
     pub point: Vector3<f64>,
     pub normal: Vector3<f64>,
     pub t: f64,
     pub material: Rc<dyn Scatter>,
-    pub front_face: bool
+    pub front_face: bool,
 }
 
 pub type World = Vec<Box<dyn Hit>>;
