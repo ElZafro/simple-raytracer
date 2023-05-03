@@ -16,7 +16,7 @@ impl Ray {
 }
 
 pub fn reflect(ray: &Vector3<f64>, normal: &Vector3<f64>) -> Vector3<f64> {
-    ray - 2.0 * ray.dot(&normal) * normal
+    ray - 2.0 * ray.dot(normal) * normal
 }
 
 pub fn refract(ray: &Vector3<f64>, normal: &Vector3<f64>, etai_over_etat: f64) -> Vector3<f64> {

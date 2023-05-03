@@ -6,7 +6,7 @@ use crate::{
     ray::{reflect, refract, Ray},
 };
 
-pub trait Scatter {
+pub trait Scatter: Send + Sync {
     fn scatter(&self, r_in: &Ray, record: &HitRecord) -> Option<(Ray, Vector3<f64>)>;
 }
 
@@ -21,7 +21,7 @@ impl Lambertian {
 }
 
 impl Scatter for Lambertian {
-    fn scatter(&self, r_in: &Ray, hit_record: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
+    fn scatter(&self, _r_in: &Ray, hit_record: &HitRecord) -> Option<(Ray, Vector3<f64>)> {
         let random_unit_vector = Vector3::new(
             random::<f64>() * 2.0 - 1.0,
             random::<f64>() * 2.0 - 1.0,

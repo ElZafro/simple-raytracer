@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use nalgebra::Vector3;
 
@@ -8,13 +8,13 @@ pub struct HitRecord {
     pub point: Vector3<f64>,
     pub normal: Vector3<f64>,
     pub t: f64,
-    pub material: Rc<dyn Scatter>,
+    pub material: Arc<dyn Scatter>,
     pub front_face: bool,
 }
 
 pub type World = Vec<Box<dyn Hit>>;
 
-pub trait Hit {
+pub trait Hit: Send + Sync {
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
 }
 

@@ -4,12 +4,14 @@ mod material;
 mod ray;
 mod sphere;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 use hit::{Hit, World};
-use image::{ImageBuffer, Rgb};
+use image::{ImageBuffer, Rgb, RgbImage};
 use nalgebra::Vector3;
 use ray::Ray;
+use rayon::prelude::IntoParallelIterator;
+use rayon::prelude::*;
 use sphere::Sphere;
 
 use crate::{
@@ -32,28 +34,28 @@ fn ray_color(r: &Ray, world: &World, depth: u64) -> Vector3<f64> {
     (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
 }
 
-fn get_color(pixel_color: Vector3<f64>) -> Rgb<u8> {
-    Rgb([
+fn get_color(pixel_color: Vector3<f64>) -> [u8; 3] {
+    [
         (256.0 * (pixel_color.x).sqrt().clamp(0.0, 0.999)) as u8,
         (256.0 * (pixel_color.y).sqrt().clamp(0.0, 0.999)) as u8,
         (256.0 * (pixel_color.z).sqrt().clamp(0.0, 0.999)) as u8,
-    ])
+    ]
 }
 
 fn main() {
     //Image
     const ASPECT_RATIO: f64 = 16.0 / 9.0;
-    const WIDTH: usize = 256;
-    const HEIGHT: usize = ((WIDTH as f64) / ASPECT_RATIO) as usize;
+    const WIDTH: u32 = 1024;
+    const HEIGHT: u32 = ((WIDTH as f64) / ASPECT_RATIO) as u32;
     const SAMPLES_PER_PIXEL: usize = 300;
     const MAX_DEPTH: u64 = 5;
 
     //World
     let mut world = World::new();
-    let material_ground = Rc::new(Lambertian::new(Vector3::new(0.5, 0.5, 0.0)));
-    let material_center = Rc::new(Lambertian::new(Vector3::new(0.1, 0.2, 0.5)));
-    let material_left = Rc::new(Dielectric::new(1.5));
-    let material_right = Rc::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 0.0));
+    let material_ground = Arc::new(Lambertian::new(Vector3::new(0.5, 0.5, 0.0)));
+    let material_center = Arc::new(Lambertian::new(Vector3::new(0.1, 0.2, 0.5)));
+    let material_left = Arc::new(Dielectric::new(1.5));
+    let material_right = Arc::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 0.0));
 
     let sphere_ground = Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0, material_ground);
     let sphere_center = Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5, material_center);
@@ -75,21 +77,30 @@ fn main() {
         16.0 / 9.0,
     );
 
-    let mut imgbuf = ImageBuffer::new(WIDTH as u32, HEIGHT as u32);
-    for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-        let mut pixel_color = Vector3::<f64>::new(0.0, 0.0, 0.0);
-        for _ in 0..SAMPLES_PER_PIXEL {
-            let y = HEIGHT as u32 - y;
+    let image_buffer = (0..HEIGHT)
+        .into_par_iter()
+        .map(|y| {
+            let mut row = [[0u8; 3]; WIDTH as usize];
+            for x in 0..(WIDTH as usize) {
+                let mut pixel_color = Vector3::<f64>::new(0.0, 0.0, 0.0);
+                for _ in 0..SAMPLES_PER_PIXEL {
+                    let y = HEIGHT - y;
 
-            let u = (x as f64 + rand::random::<f64>() - 0.5) / ((WIDTH - 1) as f64);
-            let v = (y as f64 + rand::random::<f64>() - 0.5) / ((HEIGHT - 1) as f64);
+                    let u = (x as f64 + rand::random::<f64>() - 0.5) / ((WIDTH - 1) as f64);
+                    let v = (y as f64 + rand::random::<f64>() - 0.5) / ((HEIGHT - 1) as f64);
 
-            let ray = camera.get_ray(u, v);
-            pixel_color += ray_color(&ray, &world, MAX_DEPTH);
-        }
-        pixel_color /= SAMPLES_PER_PIXEL as f64;
-        *pixel = get_color(pixel_color);
-    }
+                    let ray = camera.get_ray(u, v);
+                    pixel_color += ray_color(&ray, &world, MAX_DEPTH);
+                }
+                pixel_color /= SAMPLES_PER_PIXEL as f64;
+                row[x] = get_color(pixel_color);
+            }
+            row
+        })
+        .flatten()
+        .flatten()
+        .collect::<Vec<_>>();
 
-    imgbuf.save("image.png").unwrap();
+    let image_buffer = RgbImage::from_raw(WIDTH, HEIGHT, image_buffer).unwrap();
+    image_buffer.save("image.png").unwrap();
 }

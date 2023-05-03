@@ -1,4 +1,4 @@
-use std::{f64::EPSILON, rc::Rc};
+use std::{f64::EPSILON, sync::Arc};
 
 use nalgebra::Vector3;
 
@@ -11,11 +11,11 @@ use crate::{
 pub struct Sphere {
     center: Vector3<f64>,
     radius: f64,
-    material: Rc<dyn Scatter>,
+    material: Arc<dyn Scatter>,
 }
 
 impl Sphere {
-    pub fn new(center: Vector3<f64>, radius: f64, material: Rc<dyn Scatter>) -> Self {
+    pub fn new(center: Vector3<f64>, radius: f64, material: Arc<dyn Scatter>) -> Self {
         Self {
             center,
             radius,
