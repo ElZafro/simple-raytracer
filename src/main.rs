@@ -7,17 +7,16 @@ mod sphere;
 use std::sync::Arc;
 
 use hit::{Hit, World};
-use image::{ImageBuffer, Rgb, RgbImage};
+use image::RgbImage;
+use material::generate_random_material;
 use nalgebra::Vector3;
+use rand::random;
 use ray::Ray;
 use rayon::prelude::IntoParallelIterator;
 use rayon::prelude::*;
 use sphere::Sphere;
 
-use crate::{
-    camera::Camera,
-    material::{Dielectric, Lambertian, Metal},
-};
+use crate::{camera::Camera, material::Lambertian};
 
 fn ray_color(r: &Ray, world: &World, depth: u64) -> Vector3<f64> {
     if let Some(hit_record) = world.hit(r, 0.001, f64::MAX) {
@@ -42,58 +41,60 @@ fn get_color(pixel_color: Vector3<f64>) -> [u8; 3] {
     ]
 }
 
+fn random_scene() -> World {
+    let mut world = World::new();
+
+    let material_ground = Arc::new(Lambertian::new(Vector3::new(0.2, 0.4, 0.0)));
+    let sphere_ground = Sphere::new(Vector3::new(0.0, -1000.0, 0.0), 1000.0, material_ground);
+    world.push(Box::new(sphere_ground));
+
+    for z in -11..3 {
+        for x in -11..11 {
+            let sphere = Sphere::new(
+                Vector3::new(x as f64 + random::<f64>(), 0.2, z as f64 + random::<f64>()),
+                0.2,
+                generate_random_material(),
+            );
+            world.push(Box::new(sphere));
+        }
+    }
+    world
+}
+
 fn main() {
     //Image
     const ASPECT_RATIO: f64 = 16.0 / 9.0;
-    const WIDTH: u32 = 1024;
+    const WIDTH: u32 = 1080;
     const HEIGHT: u32 = ((WIDTH as f64) / ASPECT_RATIO) as u32;
     const SAMPLES_PER_PIXEL: usize = 300;
     const MAX_DEPTH: u64 = 5;
 
-    //World
-    let mut world = World::new();
-    let material_ground = Arc::new(Lambertian::new(Vector3::new(0.5, 0.5, 0.0)));
-    let material_center = Arc::new(Lambertian::new(Vector3::new(0.1, 0.2, 0.5)));
-    let material_left = Arc::new(Dielectric::new(1.5));
-    let material_right = Arc::new(Metal::new(Vector3::new(0.8, 0.6, 0.2), 0.0));
-
-    let sphere_ground = Sphere::new(Vector3::new(0.0, -100.5, -1.0), 100.0, material_ground);
-    let sphere_center = Sphere::new(Vector3::new(0.0, 0.0, -1.0), 0.5, material_center);
-    let sphere_left = Sphere::new(Vector3::new(-1.0, 0.0, -1.0), 0.5, material_left.clone());
-    let sphere_left_inner = Sphere::new(Vector3::new(-1.0, 0.0, -1.0), -0.4, material_left);
-    let sphere_right = Sphere::new(Vector3::new(1.0, 0.0, -1.0), 0.5, material_right);
-
-    world.push(Box::new(sphere_ground));
-    world.push(Box::new(sphere_center));
-    world.push(Box::new(sphere_left));
-    world.push(Box::new(sphere_left_inner));
-    world.push(Box::new(sphere_right));
-
     let camera = Camera::new(
-        Vector3::new(0.3, 0.84, 1.0),
+        Vector3::new(0.3, 5.0, 0.0),
         Vector3::new(0.0, 0.0, -1.0),
         Vector3::new(0.0, 1.0, 0.0),
         55.0,
         16.0 / 9.0,
     );
 
+    let world = random_scene();
+
     let image_buffer = (0..HEIGHT)
         .into_par_iter()
         .map(|y| {
+            let y = HEIGHT - y;
             let mut row = [[0u8; 3]; WIDTH as usize];
-            for x in 0..(WIDTH as usize) {
+            for (x, pixel) in row.iter_mut().enumerate() {
                 let mut pixel_color = Vector3::<f64>::new(0.0, 0.0, 0.0);
                 for _ in 0..SAMPLES_PER_PIXEL {
-                    let y = HEIGHT - y;
-
-                    let u = (x as f64 + rand::random::<f64>() - 0.5) / ((WIDTH - 1) as f64);
-                    let v = (y as f64 + rand::random::<f64>() - 0.5) / ((HEIGHT - 1) as f64);
+                    let u = (x as f64 + random::<f64>() - 0.5) / ((WIDTH - 1) as f64);
+                    let v = (y as f64 + random::<f64>() - 0.5) / ((HEIGHT - 1) as f64);
 
                     let ray = camera.get_ray(u, v);
                     pixel_color += ray_color(&ray, &world, MAX_DEPTH);
                 }
                 pixel_color /= SAMPLES_PER_PIXEL as f64;
-                row[x] = get_color(pixel_color);
+                *pixel = get_color(pixel_color);
             }
             row
         })

@@ -1,5 +1,7 @@
+use std::sync::Arc;
+
 use nalgebra::Vector3;
-use rand::random;
+use rand::{random, Rng};
 
 use crate::{
     hit::HitRecord,
@@ -8,6 +10,21 @@ use crate::{
 
 pub trait Scatter: Send + Sync {
     fn scatter(&self, r_in: &Ray, record: &HitRecord) -> Option<(Ray, Vector3<f64>)>;
+}
+
+pub fn generate_random_material() -> Arc<dyn Scatter> {
+    match rand::thread_rng().gen_range(0..10) {
+        0..=5 => Arc::new(Lambertian::new(Vector3::new(
+            random::<f64>(),
+            random::<f64>(),
+            random::<f64>(),
+        ))),
+        6..=8 => Arc::new(Metal::new(
+            Vector3::new(random::<f64>(), random::<f64>(), random::<f64>()),
+            random::<f64>(),
+        )),
+        _ => Arc::new(Dielectric::new(1.5)),
+    }
 }
 
 pub struct Lambertian {
