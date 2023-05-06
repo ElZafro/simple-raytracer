@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use hit::{Hit, World};
 use image::RgbImage;
-use material::generate_random_material;
+use material::{generate_random_material, Dielectric, Lambertian, Metal};
 use nalgebra::Vector3;
 use rand::random;
 use ray::Ray;
@@ -16,7 +16,7 @@ use rayon::prelude::IntoParallelIterator;
 use rayon::prelude::*;
 use sphere::Sphere;
 
-use crate::{camera::Camera, material::Lambertian};
+use camera::Camera;
 
 fn ray_color(r: &Ray, world: &World, depth: u64) -> Vector3<f64> {
     if let Some(hit_record) = world.hit(r, 0.001, f64::MAX) {
@@ -44,11 +44,11 @@ fn get_color(pixel_color: Vector3<f64>) -> [u8; 3] {
 fn random_scene() -> World {
     let mut world = World::new();
 
-    let material_ground = Arc::new(Lambertian::new(Vector3::new(0.2, 0.4, 0.0)));
+    let material_ground = Arc::new(Lambertian::new(Vector3::new(0.5, 0.5, 0.5)));
     let sphere_ground = Sphere::new(Vector3::new(0.0, -1000.0, 0.0), 1000.0, material_ground);
     world.push(Box::new(sphere_ground));
 
-    for z in -11..3 {
+    for z in -11..11 {
         for x in -11..11 {
             let sphere = Sphere::new(
                 Vector3::new(x as f64 + random::<f64>(), 0.2, z as f64 + random::<f64>()),
@@ -58,22 +58,35 @@ fn random_scene() -> World {
             world.push(Box::new(sphere));
         }
     }
+
+    let mat1 = Arc::new(Dielectric::new(1.5));
+    let mat2 = Arc::new(Lambertian::new(Vector3::new(0.4, 0.2, 0.1)));
+    let mat3 = Arc::new(Metal::new(Vector3::new(0.7, 0.6, 0.5), 0.0));
+
+    let sphere1 = Sphere::new(Vector3::new(0.0, 1.0, 0.0), 1.0, mat1);
+    let sphere2 = Sphere::new(Vector3::new(-4.0, 1.0, 0.0), 1.0, mat2);
+    let sphere3 = Sphere::new(Vector3::new(4.0, 1.0, 0.0), 1.0, mat3);
+
+    world.push(Box::new(sphere1));
+    world.push(Box::new(sphere2));
+    world.push(Box::new(sphere3));
+
     world
 }
 
 fn main() {
     //Image
     const ASPECT_RATIO: f64 = 16.0 / 9.0;
-    const WIDTH: u32 = 1080;
+    const WIDTH: u32 = 1200;
     const HEIGHT: u32 = ((WIDTH as f64) / ASPECT_RATIO) as u32;
-    const SAMPLES_PER_PIXEL: usize = 300;
-    const MAX_DEPTH: u64 = 5;
+    const SAMPLES_PER_PIXEL: usize = 500;
+    const MAX_DEPTH: u64 = 50;
 
     let camera = Camera::new(
-        Vector3::new(0.3, 5.0, 0.0),
-        Vector3::new(0.0, 0.0, -1.0),
+        Vector3::new(13.0, 2.0, 3.0),
+        Vector3::new(0.0, 0.0, 0.0),
         Vector3::new(0.0, 1.0, 0.0),
-        55.0,
+        20.0,
         16.0 / 9.0,
     );
 
@@ -96,6 +109,7 @@ fn main() {
                 pixel_color /= SAMPLES_PER_PIXEL as f64;
                 *pixel = get_color(pixel_color);
             }
+            println!("{}", y);
             row
         })
         .flatten()

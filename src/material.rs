@@ -13,13 +13,13 @@ pub trait Scatter: Send + Sync {
 }
 
 pub fn generate_random_material() -> Arc<dyn Scatter> {
-    match rand::thread_rng().gen_range(0..10) {
-        0..=5 => Arc::new(Lambertian::new(Vector3::new(
+    match rand::thread_rng().gen_range(0..100) {
+        0..=70 => Arc::new(Lambertian::new(Vector3::new(
             random::<f64>(),
             random::<f64>(),
             random::<f64>(),
         ))),
-        6..=8 => Arc::new(Metal::new(
+        0..=95 => Arc::new(Metal::new(
             Vector3::new(random::<f64>(), random::<f64>(), random::<f64>()),
             random::<f64>(),
         )),
